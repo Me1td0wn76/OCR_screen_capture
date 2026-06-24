@@ -27,3 +27,6 @@ setupは、初回起動時にUIで設定できるようにしたい！
 UIは可愛くしたいよね  
 exeでSETUPするときは\username\AppData\Local\Programs\OCR_SCREEN_CAPTURE_TRANSCRIPTIONにインストールされるようにしたい！  
 これならUACに引っかからんやろ。たぶん。
+SetupはWeb上で表示させないようにする！
+UIだけはWebと同じ感じにしたいでも、Web上で表示させないようにする！これやね。
+pywebviewを使うと、Web上で表示させないようにできるらしい。これか...
