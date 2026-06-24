@@ -65,7 +65,7 @@ app/
   webview_ui.py         pywebviewのネイティブ窓管理（js_apiでフォルダ選択）
   config.py / paths.py  設定(config.json)とパス解決（dev/exe両対応）
   web/                  Flask: UIページ(setup/settings) + JSON API
-    templates/  static/ 可愛いHTML/CSS/JS
+    templates/  static/ 可愛いHTML/CSS/JS (とりあえずAIに作らせた)
 ```
 
 ## 開発実行
