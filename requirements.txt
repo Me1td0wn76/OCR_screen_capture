@@ -10,7 +10,8 @@ pyperclip>=1.11.0
 pyttsx3>=2.99
 pywin32>=311
 requests>=2.34.0
-customtkinter>=5.2.2
+flask>=3.0
+pywebview>=6.2     # native window UI (Edge WebView2 on Windows)
 
 # Build only (exe packaging):
 # pyinstaller>=6.0
