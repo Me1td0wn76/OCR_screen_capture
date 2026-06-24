@@ -14,3 +14,4 @@ config.json
 # app needs to build/run (only ~3.5 MB).
 models/*
 models/japan_rec_crnn_v2.onnx
+installer_out/*
