@@ -78,7 +78,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=True,  # tray app: no console window
+    console=False,  # tray app: no console window
 )
 coll = COLLECT(
     exe,

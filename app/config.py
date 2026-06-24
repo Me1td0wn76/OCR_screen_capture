@@ -62,7 +62,7 @@ def load_config() -> dict[str, Any]:
         save_config(DEFAULTS)
         return copy.deepcopy(DEFAULTS)
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8-sig") as f:  # tolerate a BOM
             user = json.load(f)
     except (json.JSONDecodeError, OSError) as e:
         log.warning("Could not read %s (%s); using defaults.", path, e)
