@@ -9,12 +9,13 @@ from typing import Callable, Optional
 import pyperclip
 from PIL import Image
 
+from . import models_registry as registry
 from .clipboard_watch import ClipboardWatcher, grab_clipboard_image
-from .config import load_config, save_config
+from .config import load_config, resolve_model_dir, save_config
 from .ocr import OCREngine
 from .paths import config_path
 from .translate import Translator
-from .tts import Speaker
+from .tts import Speaker, list_voices
 
 log = logging.getLogger(__name__)
 
@@ -34,12 +35,16 @@ class Controller:
         self.translator = Translator(self.cfg)
         self.watcher = ClipboardWatcher(self.handle_image)
         self.last_text: str = ""
+        self.web_url: Optional[str] = None
         self._notify: NotifyFn = lambda title, msg: None
         self._busy = threading.Lock()
 
     # -- wiring -------------------------------------------------------------
     def set_notifier(self, notifier: NotifyFn) -> None:
         self._notify = notifier
+
+    def set_web_url(self, url: str) -> None:
+        self.web_url = url
 
     def notify(self, title: str, message: str) -> None:
         if self.cfg.get("show_notifications", True):
@@ -85,6 +90,62 @@ class Controller:
             os.startfile(str(path))  # noqa: S606 - intended on Windows
         except Exception:
             log.exception("could not open config file")
+
+    # -- setup / web-UI driven settings ------------------------------------
+    def needs_setup(self) -> bool:
+        """First run, or the model for the chosen language isn't available yet."""
+        if not self.cfg.get("setup_completed", False):
+            return True
+        return not self._current_model_available()
+
+    def _current_model_available(self) -> bool:
+        language = self.cfg.get("language", registry.DEFAULT_LANGUAGE)
+        from .paths import bundled_models_dir
+        for base in (resolve_model_dir(self.cfg), bundled_models_dir()):
+            if registry.is_downloaded(base, language):
+                return True
+        return False
+
+    def get_status(self) -> dict:
+        """Snapshot consumed by the web UI."""
+        model_dir = resolve_model_dir(self.cfg)
+        languages = [
+            {
+                "code": info.code,
+                "label": info.label,
+                "downloaded": registry.is_downloaded(model_dir, code),
+            }
+            for code, info in registry.MODELS.items()
+        ]
+        return {
+            "config": self.cfg,
+            "model_dir": str(model_dir),
+            "languages": languages,
+            "voices": [{"id": vid, "name": name} for vid, name in list_voices()],
+            "llm_available": self.translator.is_available(),
+        }
+
+    def download_model(self, language: str, progress=None) -> None:
+        """Download the model for ``language`` into the configured model dir."""
+        registry.download_model(resolve_model_dir(self.cfg), language, progress)
+
+    def apply_settings(self, patch: dict) -> None:
+        """Merge a settings patch from the web UI, persist, and rebuild parts."""
+        from .config import _deep_merge
+        self.cfg = _deep_merge(self.cfg, patch)
+        self._save()
+        # Rebuild components so they pick up the new config.
+        self.ocr = OCREngine(self.cfg)
+        self.tts = Speaker(self.cfg)
+        self.translator = Translator(self.cfg)
+        self.watcher.set_enabled(self.cfg.get("auto_ocr", True))
+        threading.Thread(target=self.ocr.warm_up, name="ocr-warmup", daemon=True).start()
+
+    def complete_setup(self, language: str, model_dir: str | None) -> None:
+        patch = {"language": language, "setup_completed": True}
+        if model_dir is not None:
+            patch["model_dir"] = model_dir
+        self.apply_settings(patch)
 
     # -- actions ------------------------------------------------------------
     def handle_image(self, img: Image.Image) -> None:
