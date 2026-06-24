@@ -25,8 +25,11 @@ datas += [
     ("app/web/templates", "app/web/templates"),
     ("app/web/static", "app/web/static"),
 ]
-# Japanese model as an offline default (other languages download on demand).
-datas += [("models/japan_rec_crnn_v2.onnx", "models")]
+# Japanese model as an offline default IF present locally (it is gitignored and
+# downloaded at runtime by the setup wizard, so a fresh clone may not have it).
+import os as _os
+if _os.path.exists("models/japan_rec_crnn_v2.onnx"):
+    datas += [("models/japan_rec_crnn_v2.onnx", "models")]
 
 # Modules PyInstaller's static analysis tends to miss.
 hiddenimports += [

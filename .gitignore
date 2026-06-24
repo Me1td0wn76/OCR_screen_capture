@@ -10,8 +10,13 @@ dist/
 ocr_tool.log
 config.json
 
-# Models are large; keep them out of git EXCEPT the Japanese rec model the
-# app needs to build/run (only ~3.5 MB).
-models/*
-models/japan_rec_crnn_v2.onnx
-installer_out/*
+# OCR models are downloaded at runtime by the setup wizard; keep them out of git.
+# (The build bundles the Japanese model only if it happens to be present locally.)
+models/
+
+# Built installer (publish it as a GitHub Release asset, not in git).
+installer_out/
+
+# Local scratch / editor
+*.spec.bak
+.vscode/
