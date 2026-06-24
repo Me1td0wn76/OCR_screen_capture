@@ -35,7 +35,7 @@ class Controller:
         self.translator = Translator(self.cfg)
         self.watcher = ClipboardWatcher(self.handle_image)
         self.last_text: str = ""
-        self.web_url: Optional[str] = None
+        self.ui = None  # set by main(); native UIManager
         self._notify: NotifyFn = lambda title, msg: None
         self._busy = threading.Lock()
 
@@ -43,8 +43,8 @@ class Controller:
     def set_notifier(self, notifier: NotifyFn) -> None:
         self._notify = notifier
 
-    def set_web_url(self, url: str) -> None:
-        self.web_url = url
+    def set_ui(self, ui) -> None:
+        self.ui = ui
 
     def notify(self, title: str, message: str) -> None:
         if self.cfg.get("show_notifications", True):

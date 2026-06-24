@@ -11,9 +11,9 @@ import logging
 import sys
 
 from app.controller import Controller
+from app.gui import UIManager
 from app.paths import app_dir
 from app.tray import TrayApp
-from app.web.server import WebUI
 
 
 def _setup_logging() -> None:
@@ -34,14 +34,13 @@ def main() -> int:
     log.info("starting OCR tray app")
     try:
         controller = Controller()
-        web = WebUI(controller)          # local Flask settings/setup server
-        web.start()
-        controller.set_web_url(web.url)
-        log.info("web UI at %s", web.url)
-        tray = TrayApp(controller, web_url=web.url)
-        # First launch (no model configured yet) -> open the setup wizard.
+        ui = UIManager(controller)       # native CustomTkinter settings/setup
+        ui.start()
+        controller.set_ui(ui)
+        tray = TrayApp(controller, ui)
+        # First launch (no model configured yet) -> show the setup wizard.
         if controller.needs_setup():
-            web.open_in_browser("/setup")
+            ui.show_setup()
         tray.run()                       # blocks until the user quits
     except Exception:
         log.exception("fatal error")

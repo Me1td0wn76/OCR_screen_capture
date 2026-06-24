@@ -13,18 +13,13 @@ datas = []
 binaries = []
 hiddenimports = []
 
-# Bundle packages that carry data files / native libs RapidOCR + Flask need.
-for pkg in ("rapidocr_onnxruntime", "onnxruntime", "shapely", "flask"):
+# Bundle packages that carry data files / native libs (RapidOCR, CustomTkinter).
+for pkg in ("rapidocr_onnxruntime", "onnxruntime", "shapely", "customtkinter"):
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b
     hiddenimports += h
 
-# Web UI templates/static (loaded at runtime from _MEIPASS/app/web/...).
-datas += [
-    ("app/web/templates", "app/web/templates"),
-    ("app/web/static", "app/web/static"),
-]
 # Japanese model as an offline default (other languages download on demand).
 datas += [("models/japan_rec_crnn_v2.onnx", "models")]
 
@@ -38,6 +33,7 @@ hiddenimports += [
     "win32com.client",
     "pyclipper",
     "cv2",
+    "darkdetect",
 ]
 
 a = Analysis(
@@ -64,7 +60,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=False,  # tray app: no console window
+    console=True,  # tray app: no console window
 )
 coll = COLLECT(
     exe,

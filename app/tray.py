@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import webbrowser
 
 import pystray
 from PIL import Image, ImageDraw
@@ -22,9 +21,9 @@ def _make_icon_image() -> Image.Image:
 
 
 class TrayApp:
-    def __init__(self, controller: Controller, web_url: str | None = None):
+    def __init__(self, controller: Controller, ui=None):
         self.c = controller
-        self.web_url = web_url
+        self.ui = ui
         self.icon = pystray.Icon(
             "ocr_tool", _make_icon_image(), "OCR スクリーン転写", menu=self._build_menu()
         )
@@ -37,9 +36,9 @@ class TrayApp:
             log.debug("tray notify unavailable", exc_info=True)
 
     def _open_settings(self) -> None:
-        url = self.web_url or self.c.web_url
-        if url:
-            webbrowser.open(url)
+        ui = self.ui or self.c.ui
+        if ui:
+            ui.show_settings()
         else:
             self.c.open_config()
 
@@ -71,7 +70,7 @@ class TrayApp:
                 checked=lambda item: c.cfg["translate"].get("enabled", False),
             ),
             Menu.SEPARATOR,
-            MenuItem("設定を開く (ブラウザ)", lambda: self._open_settings(), default=True),
+            MenuItem("設定を開く", lambda: self._open_settings(), default=True),
             MenuItem("設定ファイル(config.json)を開く", lambda: c.open_config()),
             MenuItem("終了", self._quit),
         )
