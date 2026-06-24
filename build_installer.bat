@@ -9,7 +9,8 @@ if not exist "dist\OCR_Transcribe\OCR_Transcribe.exe" (
     exit /b 1
 )
 
-set ISCC="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+set ISCC="%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
+if not exist %ISCC% set ISCC="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 if not exist %ISCC% set ISCC="C:\Program Files\Inno Setup 6\ISCC.exe"
 if not exist %ISCC% (
     echo [!] ISCC.exe not found. Install Inno Setup 6: https://jrsoftware.org/isdl.php
