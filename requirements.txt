@@ -1,0 +1,15 @@
+# OCR screen-capture transcription tool — runtime dependencies
+# Verified on Python 3.14 (Windows).
+rapidocr-onnxruntime==1.2.3
+onnxruntime>=1.27.0
+opencv-python>=4.13.0
+numpy>=2.5.0
+Pillow>=12.0.0
+pystray>=0.19.5
+pyperclip>=1.11.0
+pyttsx3>=2.99
+pywin32>=311
+requests>=2.34.0
+
+# Build only (exe packaging):
+# pyinstaller>=6.0

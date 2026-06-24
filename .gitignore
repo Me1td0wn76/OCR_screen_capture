@@ -1,0 +1,16 @@
+*.pyc
+__pycache__/
+venv/
+.venv/
+
+build/
+dist/
+
+# Runtime / user files
+ocr_tool.log
+config.json
+
+# Models are large; keep them out of git EXCEPT the Japanese rec model the
+# app needs to build/run (only ~3.5 MB).
+models/*
+models/japan_rec_crnn_v2.onnx
