@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 
 import pystray
 from PIL import Image, ImageDraw
@@ -78,7 +79,11 @@ class TrayApp:
     def _quit(self) -> None:
         self.c.shutdown()
         self.icon.stop()
+        ui = self.ui or self.c.ui
+        if ui:
+            ui.quit()   # ends the main-thread webview loop so the process exits
 
-    def run(self) -> None:
+    def start(self) -> None:
+        """Start background work and run the tray icon on its own thread."""
         self.c.start()
-        self.icon.run()
+        threading.Thread(target=self.icon.run, name="tray", daemon=True).start()

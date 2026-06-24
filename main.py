@@ -4,6 +4,7 @@ Run with:  python main.py
 Build exe: see build.bat / ocr_tool.spec
 
 The source lives under the app/ package; this thin launcher wires it together.
+The tray icon runs on its own thread while pywebview owns the main thread.
 """
 from __future__ import annotations
 
@@ -11,9 +12,10 @@ import logging
 import sys
 
 from app.controller import Controller
-from app.gui import UIManager
 from app.paths import app_dir
 from app.tray import TrayApp
+from app.web.server import WebServer
+from app.webview_ui import WebViewUI
 
 
 def _setup_logging() -> None:
@@ -34,14 +36,19 @@ def main() -> int:
     log.info("starting OCR tray app")
     try:
         controller = Controller()
-        ui = UIManager(controller)       # native CustomTkinter settings/setup
-        ui.start()
+
+        web = WebServer(controller)      # local pages + JSON API (localhost only)
+        web.start()
+        log.info("web server at %s", web.url)
+
+        ui = WebViewUI(controller, web.url)
         controller.set_ui(ui)
+
         tray = TrayApp(controller, ui)
-        # First launch (no model configured yet) -> show the setup wizard.
-        if controller.needs_setup():
-            ui.show_setup()
-        tray.run()                       # blocks until the user quits
+        tray.start()                     # tray icon on its own thread
+
+        # pywebview must own the main thread; this blocks until the user quits.
+        ui.run_blocking(show_setup=controller.needs_setup())
     except Exception:
         log.exception("fatal error")
         return 1
