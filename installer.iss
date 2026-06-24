@@ -21,6 +21,7 @@ PrivilegesRequired=lowest
 DefaultDirName={localappdata}\Programs\OCR_SCREEN_CAPTURE_TRANSCRIPTION
 DisableProgramGroupPage=yes
 DisableDirPage=yes
+LicenseFile=LICENSE
 
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -41,6 +42,8 @@ Name: "startupicon"; Description: "Windows起動時に自動的に開始する";
 [Files]
 Source: "dist\OCR_Transcribe\*"; DestDir: "{app}"; \
     Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{userprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
