@@ -7,37 +7,24 @@ Output: dist/OCR_Transcribe/OCR_Transcribe.exe  (one-folder build)
 A one-folder build is used (not --onefile) because onnxruntime + opencv start
 noticeably faster when not unpacked to a temp dir on every launch.
 """
-import os
-import sys
-
 from PyInstaller.utils.hooks import collect_all
 
 datas = []
 binaries = []
 hiddenimports = []
 
-# --- Tkinter (manual bundling) -----------------------------------------------
-# PyInstaller's automatic tkinter hook does not fire for this Python layout, so
-# we add the package, the _tkinter extension, the Tcl/Tk DLLs, and the Tcl/Tk
-# data dir explicitly. rthook_tkinter.py points TCL_LIBRARY/TK_LIBRARY at it.
-_base = sys.base_prefix
-binaries += [
-    (os.path.join(_base, "DLLs", "_tkinter.pyd"), "."),
-    (os.path.join(_base, "DLLs", "tcl86t.dll"), "."),
-    (os.path.join(_base, "DLLs", "tk86t.dll"), "."),
-]
-datas += [
-    (os.path.join(_base, "Lib", "tkinter"), "tkinter"),
-    (os.path.join(_base, "tcl"), "tcl"),
-]
-
-# Bundle packages that carry data files / native libs (RapidOCR, CustomTkinter).
-for pkg in ("rapidocr_onnxruntime", "onnxruntime", "shapely", "customtkinter"):
+# Bundle packages that carry data files / native libs (RapidOCR, Flask, pywebview).
+for pkg in ("rapidocr_onnxruntime", "onnxruntime", "shapely", "flask", "webview"):
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b
     hiddenimports += h
 
+# Web UI templates/static (loaded at runtime from _MEIPASS/app/web/...).
+datas += [
+    ("app/web/templates", "app/web/templates"),
+    ("app/web/static", "app/web/static"),
+]
 # Japanese model as an offline default (other languages download on demand).
 datas += [("models/japan_rec_crnn_v2.onnx", "models")]
 
@@ -51,7 +38,12 @@ hiddenimports += [
     "win32com.client",
     "pyclipper",
     "cv2",
-    "darkdetect",
+    # pywebview Windows backend (Edge WebView2 via pythonnet).
+    "webview.platforms.winforms",
+    "webview.platforms.edgechromium",
+    "clr_loader",
+    "pythonnet",
+    "bottle",
 ]
 
 a = Analysis(
@@ -62,8 +54,8 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=["rthook_tkinter.py"],
-    excludes=["matplotlib", "pytest"],
+    runtime_hooks=[],
+    excludes=["tkinter", "matplotlib", "pytest"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)
