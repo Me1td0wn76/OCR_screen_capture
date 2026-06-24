@@ -9,6 +9,7 @@ The tray icon runs on its own thread while pywebview owns the main thread.
 from __future__ import annotations
 
 import logging
+import os
 import sys
 
 from app.controller import Controller
@@ -57,4 +58,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    code = main()
+    logging.shutdown()
+    # pywebview's .NET (pythonnet) runtime can leave a non-daemon thread that
+    # keeps the process alive after the window closes; force a clean exit.
+    os._exit(code)
