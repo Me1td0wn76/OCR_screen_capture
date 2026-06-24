@@ -13,14 +13,19 @@ datas = []
 binaries = []
 hiddenimports = []
 
-# Bundle packages that carry data files / native libs RapidOCR needs.
-for pkg in ("rapidocr_onnxruntime", "onnxruntime", "shapely"):
+# Bundle packages that carry data files / native libs RapidOCR + Flask need.
+for pkg in ("rapidocr_onnxruntime", "onnxruntime", "shapely", "flask"):
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b
     hiddenimports += h
 
-# Our Japanese recognition model (read at runtime from models/).
+# Web UI templates/static (loaded at runtime from _MEIPASS/app/web/...).
+datas += [
+    ("app/web/templates", "app/web/templates"),
+    ("app/web/static", "app/web/static"),
+]
+# Japanese model as an offline default (other languages download on demand).
 datas += [("models/japan_rec_crnn_v2.onnx", "models")]
 
 # Modules PyInstaller's static analysis tends to miss.
@@ -36,7 +41,7 @@ hiddenimports += [
 ]
 
 a = Analysis(
-    ["app.py"],
+    ["main.py"],
     pathex=[],
     binaries=binaries,
     datas=datas,
