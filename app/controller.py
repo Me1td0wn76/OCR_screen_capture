@@ -108,12 +108,15 @@ class Controller:
 
     def get_status(self) -> dict:
         """Snapshot consumed by the web UI."""
+        from .paths import bundled_models_dir
         model_dir = resolve_model_dir(self.cfg)
+        bundled = bundled_models_dir()
         languages = [
             {
                 "code": info.code,
                 "label": info.label,
-                "downloaded": registry.is_downloaded(model_dir, code),
+                "downloaded": registry.is_downloaded(model_dir, code)
+                or registry.is_downloaded(bundled, code),
             }
             for code, info in registry.MODELS.items()
         ]
