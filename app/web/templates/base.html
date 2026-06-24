@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}OCR ツール{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="bg-blobs"><span></span><span></span><span></span></div>
+  <main class="wrap">
+    <header class="hero">
+      <div class="mascot">🐱</div>
+      <div>
+        <h1>OCR スクリーン転写</h1>
+        <p class="tagline">{% block tagline %}画面の文字を、ぱちっと読み取り✨{% endblock %}</p>
+      </div>
+    </header>
+    {% block content %}{% endblock %}
+    <footer class="foot">made with ♥ ・ ローカル動作 / CPU のみ</footer>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  {% block script %}{% endblock %}
+</body>
+</html>
