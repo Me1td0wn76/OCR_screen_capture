@@ -37,6 +37,7 @@ def main() -> int:
         web = WebUI(controller)          # local Flask settings/setup server
         web.start()
         controller.set_web_url(web.url)
+        log.info("web UI at %s", web.url)
         tray = TrayApp(controller, web_url=web.url)
         # First launch (no model configured yet) -> open the setup wizard.
         if controller.needs_setup():
