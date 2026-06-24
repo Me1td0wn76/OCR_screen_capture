@@ -4,20 +4,23 @@ from __future__ import annotations
 import copy
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
-from .paths import config_path
+from .paths import config_path, default_models_dir
 
 log = logging.getLogger(__name__)
 
 DEFAULTS: dict[str, Any] = {
+    # --- Setup / language ---
+    # ``language`` selects the recognition model; the model file + input height
+    # are derived from app.models_registry. ``model_dir`` empty means "use the
+    # default writable location next to the app" (resolved by resolve_model_dir).
+    "setup_completed": False,
+    "language": "japan",
+    "model_dir": "",
     # --- OCR ---
-    # Japanese recognition model file placed in models/. If missing, the
-    # bundled Chinese+English model is used (poor on kana). The Japanese
-    # CRNN model expects input height 32 (the default v3 model uses 48).
     "ocr": {
-        "rec_model_file": "japan_rec_crnn_v2.onnx",
-        "rec_img_height": 32,
         "text_score": 0.5,
     },
     # --- Behaviour ---
@@ -75,3 +78,9 @@ def save_config(cfg: dict[str, Any]) -> None:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
     except OSError as e:
         log.error("Could not write config to %s: %s", path, e)
+
+
+def resolve_model_dir(cfg: dict[str, Any]) -> Path:
+    """Return the configured model directory, or the default if unset."""
+    raw = (cfg.get("model_dir") or "").strip()
+    return Path(raw) if raw else default_models_dir()
