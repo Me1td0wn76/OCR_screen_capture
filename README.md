@@ -25,3 +25,5 @@ setupは、初回起動時にUIで設定できるようにしたい！
 その時にmodelの取得または初期セットアップ時の言語を変更するようにする！  
 ソースコードはappフォルダからの階層構造にする！  
 UIは可愛くしたいよね  
+exeでSETUPするときは\username\AppData\Local\Programs\OCR_SCREEN_CAPTURE_TRANSCRIPTIONにインストールされるようにしたい！  
+これならUACに引っかからんやろ。たぶん。
