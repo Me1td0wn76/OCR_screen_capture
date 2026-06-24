@@ -34,6 +34,9 @@ hiddenimports += [
     "pyclipper",
     "cv2",
     "darkdetect",
+    "tkinter",
+    "tkinter.filedialog",
+    "tkinter.ttk",
 ]
 
 a = Analysis(
