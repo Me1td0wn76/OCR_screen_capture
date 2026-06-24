@@ -22,8 +22,8 @@ DefaultDirName={localappdata}\Programs\OCR_SCREEN_CAPTURE_TRANSCRIPTION
 DisableProgramGroupPage=yes
 DisableDirPage=yes
 
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 
 OutputDir=installer_out
 OutputBaseFilename=OCR_Transcribe_Setup
