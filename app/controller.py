@@ -99,25 +99,18 @@ class Controller:
         return not self._current_model_available()
 
     def _current_model_available(self) -> bool:
-        language = self.cfg.get("language", registry.DEFAULT_LANGUAGE)
-        from .paths import bundled_models_dir
-        for base in (resolve_model_dir(self.cfg), bundled_models_dir()):
-            if registry.is_downloaded(base, language):
-                return True
-        return False
+        # The OCR models (PP-OCRv6, multilingual) ship bundled inside the
+        # rapidocr package, so a model is always available; no download needed.
+        return True
 
     def get_status(self) -> dict:
         """Snapshot consumed by the web UI."""
         from .paths import bundled_models_dir
         model_dir = resolve_model_dir(self.cfg)
         bundled = bundled_models_dir()
+        # Models are bundled with the app now, so every language is ready.
         languages = [
-            {
-                "code": info.code,
-                "label": info.label,
-                "downloaded": registry.is_downloaded(model_dir, code)
-                or registry.is_downloaded(bundled, code),
-            }
+            {"code": info.code, "label": info.label, "downloaded": True}
             for code, info in registry.MODELS.items()
         ]
         return {
@@ -129,8 +122,13 @@ class Controller:
         }
 
     def download_model(self, language: str, progress=None) -> None:
-        """Download the model for ``language`` into the configured model dir."""
-        registry.download_model(resolve_model_dir(self.cfg), language, progress)
+        """No-op: OCR models are bundled with the app (rapidocr / PP-OCRv6).
+
+        Kept for web-UI compatibility; reports instant completion.
+        """
+        if progress:
+            progress(1, 1)
+        log.info("download_model called for %s; models are bundled, nothing to do", language)
 
     def apply_settings(self, patch: dict) -> None:
         """Merge a settings patch from the web UI, persist, and rebuild parts."""
