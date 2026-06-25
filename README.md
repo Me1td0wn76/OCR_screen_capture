@@ -30,6 +30,7 @@ exeでSETUPするときは\username\AppData\Local\Programs\OCR_SCREEN_CAPTURE_TR
 SetupはWeb上で表示させないようにする！
 UIだけはWebと同じ感じにしたいでも、Web上で表示させないようにする！これやね。
 pywebviewを使うと、Web上で表示させないようにできるらしい。これか...
+結局は、Windows標準のテキストのリーダー使えばいいんじゃないかな。
 
 ---
 

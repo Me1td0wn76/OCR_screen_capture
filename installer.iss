@@ -7,7 +7,7 @@
 
 #define MyAppName "OCR Screen Capture Transcription"
 #define MyAppExeName "OCR_Transcribe.exe"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.3.0"
 #define MyAppPublisher "OCR Tool"
 
 [Setup]
@@ -32,6 +32,11 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 
+; The tray app doesn't cooperate with the Restart Manager, so we don't rely on
+; it; instead PrepareToInstall (see [Code]) force-terminates the running process
+; before any files are touched. Keep this off to avoid silent-install aborts.
+CloseApplications=no
+
 [Languages]
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 
@@ -44,6 +49,16 @@ Source: "dist\OCR_Transcribe\*"; DestDir: "{app}"; \
     Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
+
+[InstallDelete]
+; On upgrade, wipe the previous program files BEFORE the new ones are copied so
+; no orphaned modules from an older version linger (e.g. renamed/removed DLLs or
+; model files). This runs before [Files]. User data (config.json, ocr_tool.log)
+; is intentionally preserved across upgrades.
+Type: filesandordirs; Name: "{app}\_internal"
+Type: files; Name: "{app}\{#MyAppExeName}"
+Type: files; Name: "{app}\LICENSE"
+Type: files; Name: "{app}\THIRD_PARTY_NOTICES.md"
 
 [Icons]
 Name: "{userprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -65,3 +80,18 @@ Filename: "{app}\{#MyAppExeName}"; Description: "今すぐ起動する"; \
 Type: files; Name: "{app}\config.json"
 Type: files; Name: "{app}\ocr_tool.log"
 Type: filesandordirs; Name: "{app}\models"
+
+[Code]
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  // The tray app keeps its own files (in {app}) locked while running. Force it
+  // to close before [InstallDelete]/[Files] run, so an upgrade can replace the
+  // old version cleanly. Safe on a per-user install (own process, no admin).
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/IM {#MyAppExeName} /F',
+       '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Give the OS a moment to release file handles after the process exits.
+  Sleep(800);
+  Result := '';
+end;
