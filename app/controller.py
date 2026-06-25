@@ -105,9 +105,7 @@ class Controller:
 
     def get_status(self) -> dict:
         """Snapshot consumed by the web UI."""
-        from .paths import bundled_models_dir
         model_dir = resolve_model_dir(self.cfg)
-        bundled = bundled_models_dir()
         # Models are bundled with the app now, so every language is ready.
         languages = [
             {"code": info.code, "label": info.label, "downloaded": True}
