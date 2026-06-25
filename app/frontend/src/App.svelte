@@ -29,6 +29,6 @@
     <Settings />
   {/if}
 
-  <footer class="foot">made with ♥ ・ ローカル動作 / CPU のみ</footer>
+  <footer class="foot">made with Me1td0wn76</footer>
 </main>
 <div class="toast" class:show={toastState.visible}>{toastState.message}</div>
