@@ -17,6 +17,23 @@ from PIL import Image
 
 log = logging.getLogger(__name__)
 
+# UI language code (cfg["language"]) -> rapidocr recognizer language. Our codes
+# already match rapidocr's LangRec values.
+_REC_LANG = {"japan": "japan", "en": "en", "ch": "ch", "korean": "korean"}
+# The bundled default model is PP-OCRv6 (model_type "small"), whose multilingual
+# model covers Japanese/English/Chinese (and many European langs) but NOT Korean.
+# Languages listed here need a different version/model_type (downloaded on first
+# use): value is (ocr_version, model_type).
+_LANG_REC_OVERRIDE = {"korean": ("PP-OCRv5", "mobile")}
+
+
+def _as_float(value: Any, default: float | None) -> float | None:
+    """Coerce config values (which may arrive as JSON strings) to float."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
 
 class OCREngine:
     """Thin wrapper around rapidocr.RapidOCR with a stable, simple interface."""
@@ -27,13 +44,20 @@ class OCREngine:
         self._lock = threading.Lock()
 
     def _params(self) -> dict[str, Any]:
-        """Map our config onto rapidocr's dotted parameter keys."""
+        """Map our config onto rapidocr's dotted parameter keys.
+
+        Language is driven by the top-level ``cfg["language"]`` set by the
+        setup/settings UI (japan/en/ch/korean), mapped to rapidocr's
+        ``Rec.lang_type``. Korean isn't in the bundled PP-OCRv6 model, so it
+        switches the recognizer to PP-OCRv5 (downloaded on first use).
+        """
         ocr_cfg = self._cfg.get("ocr", {}) or {}
         params: dict[str, Any] = {
-            "Global.text_score": float(ocr_cfg.get("text_score", 0.5)),
+            "Global.text_score": _as_float(ocr_cfg.get("text_score"), 0.5),
             "Global.log_level": "warning",
         }
-        # Detection knobs (optional). rapidocr applies these directly.
+        # Detection knobs (optional). Coerce to float in case they arrive as
+        # strings from JSON config.
         det = ocr_cfg.get("det", {}) or {}
         det_map = {
             "unclip_ratio": "Det.unclip_ratio",
@@ -41,25 +65,45 @@ class OCREngine:
             "thresh": "Det.thresh",
         }
         for key, pkey in det_map.items():
-            if det.get(key) is not None:
-                params[pkey] = det[key]
-        # Optional: pin a recognizer language/version for advanced users. The
-        # default (unset) uses the bundled multilingual PP-OCRv6 model, which
-        # already handles Japanese/English/Chinese well.
-        lang_type = ocr_cfg.get("lang_type")
-        if lang_type:
-            params["Rec.lang_type"] = lang_type
-        ocr_version = ocr_cfg.get("ocr_version")
-        if ocr_version:
-            params["Rec.ocr_version"] = ocr_version
-            params["Det.ocr_version"] = ocr_version
+            val = _as_float(det.get(key), None)
+            if val is not None:
+                params[pkey] = val
+
+        # Recognizer language from the UI's top-level "language" setting.
+        lang = str(self._cfg.get("language", "japan")).strip().lower()
+        rec_lang = _REC_LANG.get(lang)
+        if rec_lang:
+            params["Rec.lang_type"] = rec_lang
+            override = _LANG_REC_OVERRIDE.get(lang)
+            if override:
+                # ocr_version / model_type must be passed as enums, not strings.
+                from rapidocr.utils.typings import ModelType, OCRVersion
+
+                version, model_type = override
+                params["Rec.ocr_version"] = OCRVersion(version)
+                params["Rec.model_type"] = ModelType(model_type)
         return params
 
     def _build(self):
         from rapidocr import RapidOCR  # heavy import; defer it
 
-        engine = RapidOCR(params=self._params())
-        log.info("OCR engine ready (rapidocr / PP-OCRv6 bundled models)")
+        params = self._params()
+        try:
+            engine = RapidOCR(params=params)
+        except Exception as e:
+            # An unsupported language/version combo (or a failed first-time
+            # model download) shouldn't break OCR; fall back to the bundled
+            # multilingual default model.
+            log.warning(
+                "OCR engine build failed for %s (%s); falling back to the "
+                "bundled default model.", params, e
+            )
+            engine = RapidOCR(params={
+                "Global.text_score": _as_float(
+                    self._cfg.get("ocr", {}).get("text_score"), 0.5),
+                "Global.log_level": "warning",
+            })
+        log.info("OCR engine ready (rapidocr, language=%s)", self._cfg.get("language"))
         return engine
 
     def _ensure(self):
