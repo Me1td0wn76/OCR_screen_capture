@@ -71,6 +71,7 @@ exe = EXE(
     strip=False,
     upx=False,
     console=False,  # tray app: no console window
+    version="version_info.txt",  # embeds product name / copyright / version
 )
 coll = COLLECT(
     exe,

@@ -8,13 +8,23 @@
 #define MyAppName "OCR Screen Capture Transcription"
 #define MyAppExeName "OCR_Transcribe.exe"
 #define MyAppVersion "0.3.0"
-#define MyAppPublisher "OCR Tool"
+#define MyAppPublisher "Me1td0wn76"
+#define MyAppCopyright "Copyright (C) 2026 Me1td0wn76 (MIT License)"
 
 [Setup]
 AppId={{C0B5552E-0942-4556-876C-D33C5739E55E}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
+AppCopyright={#MyAppCopyright}
+
+; Version resource of the generated Setup.exe (fills "Copyright", file version).
+VersionInfoVersion=0.3.0.0
+VersionInfoProductName={#MyAppName}
+VersionInfoProductVersion={#MyAppVersion}
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoCopyright={#MyAppCopyright}
+VersionInfoDescription={#MyAppName} Setup
 
 ; Per-user install -> LocalAppData\Programs, no administrator rights required.
 PrivilegesRequired=lowest
