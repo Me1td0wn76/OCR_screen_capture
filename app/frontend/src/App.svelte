@@ -31,3 +31,4 @@
 
   <footer class="foot">made with ♥ ・ ローカル動作 / CPU のみ</footer>
 </main>
+<div class="toast" class:show={toastState.visible}>{toastState.message}</div>
