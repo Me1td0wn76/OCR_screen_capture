@@ -35,9 +35,12 @@ class WebServer:
         base = web_dir()
         self.app = Flask(
             __name__,
-            template_folder=str(base / "templates"),
             static_folder=str(base / "static"),
         )
+        # Built Svelte SPA (app/web/static/dist/index.html). The /setup and
+        # /settings routes both return it; the front-end decides which view to
+        # render from the URL path.
+        self._dist = base / "static" / "dist"
         logging.getLogger("werkzeug").setLevel(logging.WARNING)
         self._register_routes()
 
@@ -64,11 +67,11 @@ class WebServer:
 
         @app.route("/setup")
         def setup_page():
-            return render_template("setup.html", status=c.get_status())
+            return send_from_directory(self._dist, "index.html")
 
         @app.route("/settings")
         def settings_page():
-            return render_template("settings.html", status=c.get_status())
+            return send_from_directory(self._dist, "index.html")
 
         @app.route("/api/status")
         def api_status():
