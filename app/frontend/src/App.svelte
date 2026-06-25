@@ -1,6 +1,7 @@
 <script>
   import Setup from './components/Setup.svelte';
   import Settings from './components/Settings.svelte';
+  import { toastState } from './lib/toast.svelte.js';
 
   // Flask は /setup と /settings の両方でこの同じ index.html を返す。
   // どちらの画面かは「今のURLパス」で判定する（ルーターは使わない）。
