@@ -28,8 +28,8 @@ datas += [
 # Japanese model as an offline default IF present locally (it is gitignored and
 # downloaded at runtime by the setup wizard, so a fresh clone may not have it).
 import os as _os
-if _os.path.exists("models/japan_rec_crnn_v2.onnx"):
-    datas += [("models/japan_rec_crnn_v2.onnx", "models")]
+if _os.path.exists("models/japan_PP-OCRv4_rec_mobile.onnx"):
+    datas += [("models/japan_PP-OCRv4_rec_mobile.onnx", "models")]
 
 # Modules PyInstaller's static analysis tends to miss.
 hiddenimports += [

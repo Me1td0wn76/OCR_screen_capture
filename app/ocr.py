@@ -40,6 +40,27 @@ class OCREngine:
                 return candidate, info.img_height
         return None
 
+    def _det_kwargs(self) -> dict[str, Any]:
+        """Detection overrides from config, or {} to keep RapidOCR's defaults.
+
+        RapidOCR only applies det_* kwargs when a det model path is also given,
+        so we point it at the bundled detection model when any knob is set.
+        """
+        det = self._cfg.get("ocr", {}).get("det", {}) or {}
+        mapping = {
+            "unclip_ratio": "det_unclip_ratio",
+            "box_thresh": "det_box_thresh",
+            "thresh": "det_thresh",
+        }
+        overrides = {arg: det[key] for key, arg in mapping.items() if det.get(key) is not None}
+        if not overrides:
+            return {}
+        import rapidocr_onnxruntime as _r  # det model ships inside this package
+
+        det_model = Path(_r.__file__).parent / "models" / "ch_PP-OCRv3_det_infer.onnx"
+        overrides["det_model_path"] = str(det_model)
+        return overrides
+
     def _build(self):
         from rapidocr_onnxruntime import RapidOCR  # heavy import; defer it
 
@@ -55,6 +76,7 @@ class OCREngine:
                 "No language rec model found; falling back to bundled "
                 "Chinese+English model (weak on Japanese kana)."
             )
+        kwargs.update(self._det_kwargs())
         return RapidOCR(**kwargs)
 
     def _ensure(self):
@@ -69,10 +91,32 @@ class OCREngine:
         with self._lock:
             self._engine = None
 
+    def _preprocess(self, image: Image.Image | np.ndarray) -> np.ndarray:
+        """Upscale small captures so text is large enough for the recognizer.
+
+        Screen text is frequently 12-16px tall; the recognizer normalizes each
+        line crop to ~48px, so small text gets blurrily stretched. Enlarging the
+        whole image first gives those crops real pixels to work with. Cheap (a
+        single LANCZOS resize) and only kicks in when the image is actually small.
+        """
+        img = image if isinstance(image, Image.Image) else Image.fromarray(image)
+        pp = self._cfg.get("ocr", {}).get("preprocess", {}) or {}
+        if pp.get("enabled", True):
+            min_side = int(pp.get("min_side", 300))
+            max_scale = float(pp.get("max_scale", 3.0))
+            max_pixels = int(pp.get("max_pixels", 12_000_000))
+            w, h = img.size
+            short = min(w, h)
+            if short > 0 and short < min_side:
+                scale = min(max_scale, min_side / short)
+                if scale > 1.05 and (w * h) * (scale ** 2) <= max_pixels:
+                    img = img.resize((round(w * scale), round(h * scale)), Image.LANCZOS)
+        return np.array(img)
+
     def recognize(self, image: Image.Image | np.ndarray) -> str:
         """Run OCR and return recognized text joined line by line."""
         engine = self._ensure()
-        arr = np.array(image) if isinstance(image, Image.Image) else image
+        arr = self._preprocess(image)
         text_score = float(self._cfg.get("ocr", {}).get("text_score", 0.5))
         result, _ = engine(arr, text_score=text_score)
         if not result:

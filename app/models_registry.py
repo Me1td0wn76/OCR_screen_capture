@@ -25,15 +25,28 @@ class ModelInfo:
     label: str         # human label, e.g. "日本語 (Japanese)"
     filename: str      # onnx file name (also the file stored on disk)
     img_height: int    # recognizer input height
+    source_url: str | None = None  # full download URL; None -> _BASE/filename
 
     @property
     def url(self) -> str:
-        return f"{_BASE}/{self.filename}"
+        return self.source_url or f"{_BASE}/{self.filename}"
 
+
+# Newer multilingual models that the RapidOCR HF Space doesn't carry live on
+# ModelScope (the home of the current RapidOCR model zoo). These embed their
+# character dictionary in the ONNX metadata, same as the HF ones.
+_MODELSCOPE = (
+    "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/master/onnx"
+)
 
 # Default rec model per supported language.
 MODELS: dict[str, ModelInfo] = {
-    "japan": ModelInfo("japan", "日本語 (Japanese)", "japan_rec_crnn_v2.onnx", 32),
+    # PP-OCRv4 (input height 48) is markedly more accurate on mixed
+    # kanji/kana/English/symbols than the old v2 CRNN model (height 32).
+    "japan": ModelInfo(
+        "japan", "日本語 (Japanese)", "japan_PP-OCRv4_rec_mobile.onnx", 48,
+        f"{_MODELSCOPE}/PP-OCRv4/rec/japan_PP-OCRv4_rec_mobile.onnx",
+    ),
     "en": ModelInfo("en", "英語 (English)", "en_PP-OCRv3_rec_infer.onnx", 48),
     "ch": ModelInfo("ch", "中国語 (Chinese)", "ch_PP-OCRv4_rec_infer.onnx", 48),
     "korean": ModelInfo("korean", "韓国語 (Korean)", "korean_mobile_v2.0_rec_infer.onnx", 32),

@@ -22,6 +22,23 @@ DEFAULTS: dict[str, Any] = {
     # --- OCR ---
     "ocr": {
         "text_score": 0.5,
+        # Lightweight preprocessing: screen text is often only 12-16px tall,
+        # too small for the recognizer (which wants ~48px). Upscaling small
+        # captures before OCR cuts errors noticeably at near-zero CPU cost.
+        "preprocess": {
+            "enabled": True,
+            "min_side": 300,        # upscale until the shorter side reaches this
+            "max_scale": 3.0,       # but never enlarge by more than this factor
+            "max_pixels": 12_000_000,  # safety cap so a huge capture stays cheap
+        },
+        # Advanced detection tuning. null = use RapidOCR's defaults (unchanged
+        # behaviour). Only worth touching for hard captures (low contrast, dense
+        # or overlapping text); it does nothing for ordinary, well-spaced text.
+        "det": {
+            "unclip_ratio": None,   # larger = fatter boxes (default 1.6)
+            "box_thresh": None,     # lower = keep fainter regions (default 0.5)
+            "thresh": None,         # pixel binarization threshold (default 0.3)
+        },
     },
     # --- Behaviour ---
     "auto_ocr": True,            # watch the clipboard and OCR new images
