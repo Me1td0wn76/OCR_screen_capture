@@ -1,6 +1,6 @@
 # OCR screen-capture transcription tool — runtime dependencies
 # Verified on Python 3.14 (Windows).
-rapidocr-onnxruntime==1.2.3
+rapidocr>=3.9.0          # PP-OCRv6 multilingual models bundled (det+rec+cls)
 onnxruntime>=1.27.0
 opencv-python>=4.13.0
 numpy>=2.5.0
