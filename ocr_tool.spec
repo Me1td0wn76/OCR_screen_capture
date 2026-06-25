@@ -13,8 +13,10 @@ datas = []
 binaries = []
 hiddenimports = []
 
-# Bundle packages that carry data files / native libs (RapidOCR, Flask, pywebview).
-for pkg in ("rapidocr_onnxruntime", "onnxruntime", "shapely", "flask", "webview"):
+# Bundle packages that carry data files / native libs. collect_all("rapidocr")
+# pulls in its bundled PP-OCRv6 ONNX models + yaml configs (config.yaml,
+# default_models.yaml), so OCR works offline with no model download at runtime.
+for pkg in ("rapidocr", "onnxruntime", "shapely", "flask", "webview"):
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b
@@ -25,11 +27,6 @@ datas += [
     ("app/web/templates", "app/web/templates"),
     ("app/web/static", "app/web/static"),
 ]
-# Japanese model as an offline default IF present locally (it is gitignored and
-# downloaded at runtime by the setup wizard, so a fresh clone may not have it).
-import os as _os
-if _os.path.exists("models/japan_PP-OCRv4_rec_mobile.onnx"):
-    datas += [("models/japan_PP-OCRv4_rec_mobile.onnx", "models")]
 
 # Modules PyInstaller's static analysis tends to miss.
 hiddenimports += [
