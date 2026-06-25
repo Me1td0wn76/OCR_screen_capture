@@ -107,4 +107,4 @@ build_installer.bat    :: Inno Setup 6 が必要。installer_out\OCR_Transcribe_
 
 ## 現状の問題  
 - issueに定義[issue](https://github.com/Me1td0wn76/OCR_screen_capture/issues)
-
+- [PR](https://github.com/Me1td0wn76/OCR_screen_capture/pulls)
