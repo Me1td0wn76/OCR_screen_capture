@@ -11,7 +11,7 @@ export default defineConfig({
 
   build: {
     // ビルド成果物の出力先を、Pythonアプリ側の static/dist に直接出す。
-    outDir: resolve(__dirname, '../app/web/static/dist'),
+    outDir: resolve(__dirname, '../web/static/dist'),
     emptyOutDir: true,   // ビルドのたびに dist を空にしてから出力
   },
 });
