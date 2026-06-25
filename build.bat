@@ -13,6 +13,12 @@ if not exist "%VENV_PY%" (
 echo [*] Installing build/runtime dependencies...
 "%VENV_PY%" -m pip install -r requirements.txt pyinstaller || exit /b 1
 
+echo [*] Building front-end (Svelte/Vite) into app\web\static\dist...
+pushd app\frontend
+call npm install || (popd & exit /b 1)
+call npm run build || (popd & exit /b 1)
+popd
+
 echo [*] Building exe...
 "%VENV_PY%" -m PyInstaller --noconfirm ocr_tool.spec || exit /b 1
 
