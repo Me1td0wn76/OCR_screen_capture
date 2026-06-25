@@ -101,3 +101,7 @@ build_installer.bat    :: Inno Setup 6 が必要。installer_out\OCR_Transcribe_
 - pywebviewはWindowsの **Edge WebView2**（Windows 11標準搭載）を使用します。
 - 使用ライブラリ: RapidOCR(onnxruntime) / pystray / pyttsx3 / pyperclip / pywin32 /
   requests / Flask / pywebview / PyInstaller。
+
+## 現状の問題  
+- issueに定義[issue](https://github.com/Me1td0wn76/OCR_screen_capture/issues)
+
