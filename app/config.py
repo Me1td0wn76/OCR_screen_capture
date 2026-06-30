@@ -59,6 +59,10 @@ DEFAULTS: dict[str, Any] = {
         "target_lang": "English",
         "timeout": 60,
     },
+    # --- Global hotkeys (Win32 RegisterHotKey). combo like "ctrl+shift+o". ---
+    "hotkeys": {
+        "toggle_auto_ocr": {"enabled": True, "combo": "ctrl+shift+o"},
+    },
 }
 
 
