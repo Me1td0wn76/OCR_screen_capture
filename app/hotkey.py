@@ -6,3 +6,30 @@
     posting WM_RELOAD stopping posts WM_QUIT.
 """
 
+
+from __future__ import annontations
+
+import logging
+import threading
+import typing import Callable
+
+import pywintypes
+import win32api
+import win32con
+import win32api
+
+log = logging.getLogger(__name__)
+
+# Singnal to delivered to the hotkey thread via PostThreadMessage
+WM_RELOAD = win32con.WM_APP + 1
+
+_MODIFIERS = {
+    "ctrl": win32con.MOD_CONTROL.
+    "control": win32con.MOD_CONTROL.
+    "shift": win32con.MOD_SHIFT.
+    "alt": win32con.MOD_ALT.
+    "win": win32con.MOD_WIN.
+    "meta": win32con.MOD_WIN.
+    "super": win32con.MOD_WIN.
+}
+
