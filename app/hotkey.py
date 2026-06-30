@@ -11,7 +11,8 @@ from __future__ import annontations
 
 import logging
 import threading
-import typing import Callable
+import typing
+import Callable
 
 import pywintypes
 import win32api
@@ -53,25 +54,25 @@ _NAME_VK = {
         "down": 0x28,
         }
 
-    def key_to_wk(token: str) -> int:
+def key_to_wk(token: str) -> int:
         """Virtual-key code for a single non-modifier key token. or None. """
         if len(token) == 1 and token.isalpha():
             return ord(token.upper())
-            if len(token) == 1 and token.isdigit():
-        return ord(token)
-        if token_in_NAME_VK:
+        if len(token) == 1 and token.isdigit():
+            return ord(token)
+        if token in _NAME_VK:
             return _NAME_VK[token]
         if token.startswith("f") and token[1:].isdigit():
-        n = int(token[1:])
-        if 1 <= n <= 12:
-            return 0x70 + (n - 1)  # VK_F1..VK_F12
+            n = int(token[1:])
+            if 1 <= n <= 12:
+                return 0x70 + (n - 1)  # VK_F1..VK_F12
         return None
 
 
-    class HotkeyManager:
+class HotkeyManager:
         """Registers global hotkeys and dispatches them named actions."""
 
-    def __init__(self) -> None:
+def __init__(self) -> None:
         self._actions: dict[str, Callable[[], None]] = {}
         self._config: dict[str, dict] = {}
         self._name_to_id: dict[str, int] = {}
@@ -86,9 +87,9 @@ _NAME_VK = {
 
 
     # -- public API --
-    def start(self.actions: dict[str, Callable[[],None]]) -> None:
+def start(self, actions: dict[str, Callable[[],None]]) -> None:
         """Start the hotkey thread and register the actions."""
-                self._actions = dict(actions)
+        self._actions = dict(actions)
         # Stable hotkey id (1..N) per known action.
         self._name_to_id = {name: i + 1 for i, name in enumerate(sorted(actions))}
         self._id_to_name = {i: n for n, i in self._name_to_id.items()}
@@ -96,19 +97,19 @@ _NAME_VK = {
         self._thread.start()
         self._ready.wait(timeout=3)
 
-    def apply(self, config: dict[str, dict]) -> None:
+def apply(self, config: dict[str, dict]) -> None:
         """Re-register from config: {name: {"enabled": bool, "combo": str}}."""
         with self._lock:
             self._config = {k: dict(v) for k, v in (config or {}).items()}
         if self._tid is not None:
             win32api.PostThreadMessage(self._tid, WM_RELOAD, 0, 0)
 
-    def stop(self) -> None:
+def stop(self) -> None:
         if self._tid is not None:
             win32api.PostThreadMessage(self._tid, win32con.WM_QUIT, 0, 0)
 
     # -- thread internals ---------------------------------------------------
-    def _run(self) -> None:
+def _run(self) -> None:
         self._tid = win32api.GetCurrentThreadId()
         self._ready.set()
         self._reregister()
@@ -125,7 +126,7 @@ _NAME_VK = {
         finally:
             self._unregister_all()
 
-    def _dispatch(self, hotkey_id: int) -> None:
+def _dispatch(self, hotkey_id: int) -> None:
         name = self._id_to_name.get(hotkey_id)
         fn = self._actions.get(name) if name else None
         if not fn:
@@ -135,7 +136,7 @@ _NAME_VK = {
         except Exception:
             log.exception("hotkey action %s failed", name)
 
-    def _reregister(self) -> None:
+def _reregister(self) -> None:
         self._unregister_all()
         with self._lock:
             config = dict(self._config)
@@ -161,7 +162,7 @@ _NAME_VK = {
                 self.errors[name] = "This key is already in use by another application."
                 log.warning("RegisterHotKey failed for %s=%r: %s", name, combo, e)
 
-    def _unregister_all(self) -> None:
+def _unregister_all(self) -> None:
         for hotkey_id in self._registered:
             try:
                 win32gui.UnregisterHotKey(0, hotkey_id)
