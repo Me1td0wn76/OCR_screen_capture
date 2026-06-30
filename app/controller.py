@@ -38,6 +38,7 @@ class Controller:
         self.last_text: str = ""
         self.ui = None  # set by main(); native UIManager
         self._notify: NotifyFn = lambda title, msg: None
+        self._refresh_menu: Callable[[], None] = lambda: None
         self._busy = threading.Lock()
         self.hotkeys = HotkeyManager()
 
@@ -51,6 +52,12 @@ class Controller:
     # -- wiring -------------------------------------------------------------
     def set_notifier(self, notifier: NotifyFn) -> None:
         self._notify = notifier
+
+    def set_menu_refresh(self, refresh: Callable[[], None]) -> None:
+        """Register a callback that re-renders the tray menu (pystray
+        update_menu), so checkmarks reflect state changed outside the menu
+        (e.g. via a global hotkey or the web settings page)."""
+        self._refresh_menu = refresh
 
     def set_ui(self, ui) -> None:
         self.ui = ui
@@ -81,18 +88,22 @@ class Controller:
         self.cfg["auto_ocr"] = not self.cfg.get("auto_ocr", True)
         self.watcher.set_enabled(self.cfg["auto_ocr"])
         self._save()
+        self._refresh_menu()
 
     def toggle_tts(self) -> None:
         self.cfg["tts"]["speak_on_ocr"] = not self.cfg["tts"].get("speak_on_ocr", False)
         self._save()
+        self._refresh_menu()
 
     def toggle_translate(self) -> None:
         self.cfg["translate"]["enabled"] = not self.cfg["translate"].get("enabled", False)
         self._save()
+        self._refresh_menu()
 
     def toggle_copy(self) -> None:
         self.cfg["copy_to_clipboard"] = not self.cfg.get("copy_to_clipboard", True)
         self._save()
+        self._refresh_menu()
 
     def open_config(self) -> None:
         path = config_path()
@@ -151,6 +162,7 @@ class Controller:
         self.translator = Translator(self.cfg)
         self.watcher.set_enabled(self.cfg.get("auto_ocr", True))
         self.hotkeys.apply(self.cfg.get("hotkeys", {}))
+        self._refresh_menu()
         threading.Thread(target=self.ocr.warm_up, name="ocr-warmup", daemon=True).start()
 
     def complete_setup(self, language: str, model_dir: str | None) -> None:
