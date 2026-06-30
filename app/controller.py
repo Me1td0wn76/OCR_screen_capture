@@ -1,6 +1,7 @@
 """Glue layer: clipboard image -> OCR -> clipboard text / TTS / translation."""
 from __future__ import annotations
 
+import copy
 import logging
 import os
 import threading
@@ -40,6 +41,10 @@ class Controller:
         self._notify: NotifyFn = lambda title, msg: None
         self._refresh_menu: Callable[[], None] = lambda: None
         self._busy = threading.Lock()
+        # Serializes all cfg reads/writes + save_config across threads (hotkey
+        # thread, Flask request threads, tray thread). Re-entrant so a method
+        # that holds it can still call _save().
+        self._cfg_lock = threading.RLock()
         self.hotkeys = HotkeyManager()
 
     # -- hotkey wiring -------------------------------------------------------
@@ -82,27 +87,32 @@ class Controller:
 
     # -- settings -----------------------------------------------------------
     def _save(self) -> None:
-        save_config(self.cfg)
+        with self._cfg_lock:
+            save_config(self.cfg)
 
     def toggle_auto_ocr(self) -> None:
-        self.cfg["auto_ocr"] = not self.cfg.get("auto_ocr", True)
-        self.watcher.set_enabled(self.cfg["auto_ocr"])
-        self._save()
+        with self._cfg_lock:
+            self.cfg["auto_ocr"] = not self.cfg.get("auto_ocr", True)
+            self.watcher.set_enabled(self.cfg["auto_ocr"])
+            self._save()
         self._refresh_menu()
 
     def toggle_tts(self) -> None:
-        self.cfg["tts"]["speak_on_ocr"] = not self.cfg["tts"].get("speak_on_ocr", False)
-        self._save()
+        with self._cfg_lock:
+            self.cfg["tts"]["speak_on_ocr"] = not self.cfg["tts"].get("speak_on_ocr", False)
+            self._save()
         self._refresh_menu()
 
     def toggle_translate(self) -> None:
-        self.cfg["translate"]["enabled"] = not self.cfg["translate"].get("enabled", False)
-        self._save()
+        with self._cfg_lock:
+            self.cfg["translate"]["enabled"] = not self.cfg["translate"].get("enabled", False)
+            self._save()
         self._refresh_menu()
 
     def toggle_copy(self) -> None:
-        self.cfg["copy_to_clipboard"] = not self.cfg.get("copy_to_clipboard", True)
-        self._save()
+        with self._cfg_lock:
+            self.cfg["copy_to_clipboard"] = not self.cfg.get("copy_to_clipboard", True)
+            self._save()
         self._refresh_menu()
 
     def open_config(self) -> None:
@@ -117,9 +127,10 @@ class Controller:
     # -- setup / web-UI driven settings ------------------------------------
     def needs_setup(self) -> bool:
         """First run, or the model for the chosen language isn't available yet."""
-        if not self.cfg.get("setup_completed", False):
-            return True
-        return not self._current_model_available()
+        with self._cfg_lock:
+            if not self.cfg.get("setup_completed", False):
+                return True
+            return not self._current_model_available()
 
     def _current_model_available(self) -> bool:
         # The OCR models (PP-OCRv6, multilingual) ship bundled inside the
@@ -128,14 +139,18 @@ class Controller:
 
     def get_status(self) -> dict:
         """Snapshot consumed by the web UI."""
-        model_dir = resolve_model_dir(self.cfg)
+        # Take a consistent snapshot of cfg under the lock; do slow calls
+        # (voice enumeration, LLM ping) outside it.
+        with self._cfg_lock:
+            model_dir = resolve_model_dir(self.cfg)
+            cfg_snapshot = copy.deepcopy(self.cfg)
         # Models are bundled with the app now, so every language is ready.
         languages = [
             {"code": info.code, "label": info.label, "downloaded": True}
             for code, info in registry.MODELS.items()
         ]
         return {
-            "config": self.cfg,
+            "config": cfg_snapshot,
             "model_dir": str(model_dir),
             "languages": languages,
             "voices": [{"id": vid, "name": name} for vid, name in list_voices()],
@@ -154,14 +169,15 @@ class Controller:
     def apply_settings(self, patch: dict) -> None:
         """Merge a settings patch from the web UI, persist, and rebuild parts."""
         from .config import _deep_merge
-        self.cfg = _deep_merge(self.cfg, patch)
-        self._save()
-        # Rebuild components so they pick up the new config.
-        self.ocr = OCREngine(self.cfg)
-        self.tts = Speaker(self.cfg)
-        self.translator = Translator(self.cfg)
-        self.watcher.set_enabled(self.cfg.get("auto_ocr", True))
-        self.hotkeys.apply(self.cfg.get("hotkeys", {}))
+        with self._cfg_lock:
+            self.cfg = _deep_merge(self.cfg, patch)
+            self._save()
+            # Rebuild components so they pick up the new config.
+            self.ocr = OCREngine(self.cfg)
+            self.tts = Speaker(self.cfg)
+            self.translator = Translator(self.cfg)
+            self.watcher.set_enabled(self.cfg.get("auto_ocr", True))
+            self.hotkeys.apply(self.cfg.get("hotkeys", {}))
         self._refresh_menu()
         threading.Thread(target=self.ocr.warm_up, name="ocr-warmup", daemon=True).start()
 

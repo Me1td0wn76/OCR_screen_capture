@@ -104,7 +104,11 @@ class HotkeyManager:
         self._id_to_name = {i: n for n, i in self._name_to_id.items()}
         self._thread = threading.Thread(target=self._run, name="hotkeys", daemon=True)
         self._thread.start()
-        self._ready.wait(timeout=3)
+        if not self._ready.wait(timeout=3):
+            log.error(
+                "hotkey thread did not become ready within 3s; global hotkeys "
+                "are disabled (apply() cannot reach the message loop)."
+            )
 
     def apply(self, config: dict[str, dict]) -> None:
         """Re-register from config: {name: {"enabled": bool, "combo": str}}."""

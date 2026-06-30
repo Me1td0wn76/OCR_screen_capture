@@ -55,23 +55,36 @@ class WebServer:
         self.app.run(host=self.host, port=self.port, threaded=True,
                      debug=False, use_reloader=False)
 
+    def _spa_index(self):
+        """Serve the built SPA, or a clear error if the frontend isn't built."""
+        index = self._dist / "index.html"
+        if not index.exists():
+            msg = (
+                "フロントエンドがビルドされていません。`app/frontend` で "
+                "`npm run build` を実行してください "
+                f"(missing: {index})."
+            )
+            log.error(msg)
+            return msg, 500
+        return send_from_directory(self._dist, "index.html")
+
     def _register_routes(self) -> None:
         app = self.app
         c = self.c
 
         @app.route("/")
         def index():
-            if c.cfg.get("setup_completed") and c._current_model_available():
-                return redirect(url_for("settings_page"))
-            return redirect(url_for("setup_page"))
+            if c.needs_setup():
+                return redirect(url_for("setup_page"))
+            return redirect(url_for("settings_page"))
 
         @app.route("/setup")
         def setup_page():
-            return send_from_directory(self._dist, "index.html")
+            return self._spa_index()
 
         @app.route("/settings")
         def settings_page():
-            return send_from_directory(self._dist, "index.html")
+            return self._spa_index()
 
         @app.route("/api/status")
         def api_status():
