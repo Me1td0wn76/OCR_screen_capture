@@ -103,9 +103,14 @@
   }
 
   function captureHotkey(e) {
-    e.preventDefault();
+    // 有効な組み合わせ（修飾キー＋本体キー）が取れたときだけ既定動作を抑止する。
+    // そうしないと、修飾なしの Tab / Esc などのフォーカス移動まで奪ってしまい、
+    // キーボードだけで入力欄から抜けられなくなる。
     const combo = comboFromEvent(e);
-    if (combo) cfg.hotkeys.toggle_auto_ocr.combo = combo;
+    if (combo) {
+      e.preventDefault();
+      cfg.hotkeys.toggle_auto_ocr.combo = combo;
+    }
   }
 
   // 表示用: "ctrl+shift+o" -> "Ctrl+Shift+O"
