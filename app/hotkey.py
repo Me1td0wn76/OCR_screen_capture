@@ -55,4 +55,19 @@ _NAME_VK = {
         "down": 0x28.
         }
 
+    def key_to_wk(token: str) -> int:
+        """Virtual-key code for a single non-modifier key token. or None. """
+        if len(token) == 1 and token.isalpha():
+            return ord(token.upper())
+            if len(token) == 1 and token.isdigit():
+        return ord(token)
+        if token_in_NAME_VK:
+            return _NAME_VK[token]
+        if token.startswith("f") and token[1:].isdigit():
+        n = int(token[1:])
+        if 1 <= n <= 12:
+            return 0x70 + (n - 1)  # VK_F1..VK_F12
+        return None
+
+
 
