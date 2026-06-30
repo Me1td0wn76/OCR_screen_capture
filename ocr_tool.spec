@@ -22,9 +22,11 @@ for pkg in ("rapidocr", "onnxruntime", "shapely", "flask", "webview"):
     binaries += b
     hiddenimports += h
 
-# Web UI templates/static (loaded at runtime from _MEIPASS/app/web/...).
+# Web UI assets: the built Svelte SPA + static files, loaded at runtime from
+# _MEIPASS/app/web/static/... (the SPA lives under static/dist). Run the
+# front-end build (npm run build in app/frontend) before PyInstaller so
+# static/dist exists; build.bat does this automatically.
 datas += [
-    ("app/web/templates", "app/web/templates"),
     ("app/web/static", "app/web/static"),
 ]
 

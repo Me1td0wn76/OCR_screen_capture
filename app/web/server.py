@@ -11,7 +11,7 @@ import socket
 import threading
 from typing import Any
 
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, jsonify, redirect, request, send_from_directory, url_for
 
 from ..paths import web_dir
 
@@ -35,9 +35,12 @@ class WebServer:
         base = web_dir()
         self.app = Flask(
             __name__,
-            template_folder=str(base / "templates"),
             static_folder=str(base / "static"),
         )
+        # Built Svelte SPA (app/web/static/dist/index.html). The /setup and
+        # /settings routes both return it; the front-end decides which view to
+        # render from the URL path.
+        self._dist = base / "static" / "dist"
         logging.getLogger("werkzeug").setLevel(logging.WARNING)
         self._register_routes()
 
@@ -52,23 +55,36 @@ class WebServer:
         self.app.run(host=self.host, port=self.port, threaded=True,
                      debug=False, use_reloader=False)
 
+    def _spa_index(self):
+        """Serve the built SPA, or a clear error if the frontend isn't built."""
+        index = self._dist / "index.html"
+        if not index.exists():
+            msg = (
+                "フロントエンドがビルドされていません。`app/frontend` で "
+                "`npm run build` を実行してください "
+                f"(missing: {index})."
+            )
+            log.error(msg)
+            return msg, 500
+        return send_from_directory(self._dist, "index.html")
+
     def _register_routes(self) -> None:
         app = self.app
         c = self.c
 
         @app.route("/")
         def index():
-            if c.cfg.get("setup_completed") and c._current_model_available():
-                return redirect(url_for("settings_page"))
-            return redirect(url_for("setup_page"))
+            if c.needs_setup():
+                return redirect(url_for("setup_page"))
+            return redirect(url_for("settings_page"))
 
         @app.route("/setup")
         def setup_page():
-            return render_template("setup.html", status=c.get_status())
+            return self._spa_index()
 
         @app.route("/settings")
         def settings_page():
-            return render_template("settings.html", status=c.get_status())
+            return self._spa_index()
 
         @app.route("/api/status")
         def api_status():

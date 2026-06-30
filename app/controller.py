@@ -1,6 +1,7 @@
 """Glue layer: clipboard image -> OCR -> clipboard text / TTS / translation."""
 from __future__ import annotations
 
+import copy
 import logging
 import os
 import threading
@@ -16,6 +17,7 @@ from .ocr import OCREngine
 from .paths import config_path
 from .translate import Translator
 from .tts import Speaker, list_voices
+from .hotkey import HotkeyManager
 
 log = logging.getLogger(__name__)
 
@@ -37,11 +39,30 @@ class Controller:
         self.last_text: str = ""
         self.ui = None  # set by main(); native UIManager
         self._notify: NotifyFn = lambda title, msg: None
+        self._refresh_menu: Callable[[], None] = lambda: None
         self._busy = threading.Lock()
+        # Serializes all cfg reads/writes + save_config across threads (hotkey
+        # thread, Flask request threads, tray thread). Re-entrant so a method
+        # that holds it can still call _save().
+        self._cfg_lock = threading.RLock()
+        self.hotkeys = HotkeyManager()
+
+    # -- hotkey wiring -------------------------------------------------------
+    def toggle_auto_ocr_hotkey(self) -> None:
+        """Hotkey action: flip auto-OCR on/off and notify the user."""
+        self.toggle_auto_ocr()
+        state = "ON" if self.cfg.get("auto_ocr") else "OFF"
+        self.notify("自動OCR", f"自動OCRを{state}に切り替えました")
 
     # -- wiring -------------------------------------------------------------
     def set_notifier(self, notifier: NotifyFn) -> None:
         self._notify = notifier
+
+    def set_menu_refresh(self, refresh: Callable[[], None]) -> None:
+        """Register a callback that re-renders the tray menu (pystray
+        update_menu), so checkmarks reflect state changed outside the menu
+        (e.g. via a global hotkey or the web settings page)."""
+        self._refresh_menu = refresh
 
     def set_ui(self, ui) -> None:
         self.ui = ui
@@ -57,30 +78,42 @@ class Controller:
         self.watcher.start()
         self.watcher.set_enabled(self.cfg.get("auto_ocr", True))
         threading.Thread(target=self.ocr.warm_up, name="ocr-warmup", daemon=True).start()
+        self.hotkeys.start({"toggle_auto_ocr": self.toggle_auto_ocr_hotkey})
+        self.hotkeys.apply(self.cfg.get("hotkeys", {}))
 
     def shutdown(self) -> None:
         self.watcher.stop()
+        self.hotkeys.stop()
 
     # -- settings -----------------------------------------------------------
     def _save(self) -> None:
-        save_config(self.cfg)
+        with self._cfg_lock:
+            save_config(self.cfg)
 
     def toggle_auto_ocr(self) -> None:
-        self.cfg["auto_ocr"] = not self.cfg.get("auto_ocr", True)
-        self.watcher.set_enabled(self.cfg["auto_ocr"])
-        self._save()
+        with self._cfg_lock:
+            self.cfg["auto_ocr"] = not self.cfg.get("auto_ocr", True)
+            self.watcher.set_enabled(self.cfg["auto_ocr"])
+            self._save()
+        self._refresh_menu()
 
     def toggle_tts(self) -> None:
-        self.cfg["tts"]["speak_on_ocr"] = not self.cfg["tts"].get("speak_on_ocr", False)
-        self._save()
+        with self._cfg_lock:
+            self.cfg["tts"]["speak_on_ocr"] = not self.cfg["tts"].get("speak_on_ocr", False)
+            self._save()
+        self._refresh_menu()
 
     def toggle_translate(self) -> None:
-        self.cfg["translate"]["enabled"] = not self.cfg["translate"].get("enabled", False)
-        self._save()
+        with self._cfg_lock:
+            self.cfg["translate"]["enabled"] = not self.cfg["translate"].get("enabled", False)
+            self._save()
+        self._refresh_menu()
 
     def toggle_copy(self) -> None:
-        self.cfg["copy_to_clipboard"] = not self.cfg.get("copy_to_clipboard", True)
-        self._save()
+        with self._cfg_lock:
+            self.cfg["copy_to_clipboard"] = not self.cfg.get("copy_to_clipboard", True)
+            self._save()
+        self._refresh_menu()
 
     def open_config(self) -> None:
         path = config_path()
@@ -94,9 +127,10 @@ class Controller:
     # -- setup / web-UI driven settings ------------------------------------
     def needs_setup(self) -> bool:
         """First run, or the model for the chosen language isn't available yet."""
-        if not self.cfg.get("setup_completed", False):
-            return True
-        return not self._current_model_available()
+        with self._cfg_lock:
+            if not self.cfg.get("setup_completed", False):
+                return True
+            return not self._current_model_available()
 
     def _current_model_available(self) -> bool:
         # The OCR models (PP-OCRv6, multilingual) ship bundled inside the
@@ -105,14 +139,18 @@ class Controller:
 
     def get_status(self) -> dict:
         """Snapshot consumed by the web UI."""
-        model_dir = resolve_model_dir(self.cfg)
+        # Take a consistent snapshot of cfg under the lock; do slow calls
+        # (voice enumeration, LLM ping) outside it.
+        with self._cfg_lock:
+            model_dir = resolve_model_dir(self.cfg)
+            cfg_snapshot = copy.deepcopy(self.cfg)
         # Models are bundled with the app now, so every language is ready.
         languages = [
             {"code": info.code, "label": info.label, "downloaded": True}
             for code, info in registry.MODELS.items()
         ]
         return {
-            "config": self.cfg,
+            "config": cfg_snapshot,
             "model_dir": str(model_dir),
             "languages": languages,
             "voices": [{"id": vid, "name": name} for vid, name in list_voices()],
@@ -131,13 +169,16 @@ class Controller:
     def apply_settings(self, patch: dict) -> None:
         """Merge a settings patch from the web UI, persist, and rebuild parts."""
         from .config import _deep_merge
-        self.cfg = _deep_merge(self.cfg, patch)
-        self._save()
-        # Rebuild components so they pick up the new config.
-        self.ocr = OCREngine(self.cfg)
-        self.tts = Speaker(self.cfg)
-        self.translator = Translator(self.cfg)
-        self.watcher.set_enabled(self.cfg.get("auto_ocr", True))
+        with self._cfg_lock:
+            self.cfg = _deep_merge(self.cfg, patch)
+            self._save()
+            # Rebuild components so they pick up the new config.
+            self.ocr = OCREngine(self.cfg)
+            self.tts = Speaker(self.cfg)
+            self.translator = Translator(self.cfg)
+            self.watcher.set_enabled(self.cfg.get("auto_ocr", True))
+            self.hotkeys.apply(self.cfg.get("hotkeys", {}))
+        self._refresh_menu()
         threading.Thread(target=self.ocr.warm_up, name="ocr-warmup", daemon=True).start()
 
     def complete_setup(self, language: str, model_dir: str | None) -> None:
@@ -197,11 +238,14 @@ class Controller:
         if not self._busy.acquire(blocking=False):
             return  # an OCR job is already running; skip this one
         try:
+            log.info("OCR: recognizing clipboard image %sx%s", *img.size)
             self.notify("OCR", "認識中…")
             text = self.ocr.recognize(img)
             if not text:
+                log.info("OCR: no text detected")
                 self.notify("OCR", "文字を検出できませんでした")
                 return
+            log.info("OCR: done (%d chars)", len(text))
             self.last_text = text
             self._copy_text(text)
 
@@ -222,3 +266,4 @@ class Controller:
                 self.tts.speak(text)
         finally:
             self._busy.release()
+

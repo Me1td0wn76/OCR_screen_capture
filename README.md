@@ -18,6 +18,10 @@
 - 軽量のOCRライブラリ（例：pytesseract）
 - etc...
 - exe化にはpyinstallerかな
+- nodejs(26.1.0)
+- pywebview
+- Svelte
+
   
 model folder は自分のlocateを初期設定時にconfigで(configはUIで設定可能)指定できるようにする予定!  
 またそれに合わせてmodelの取得または初期セットアップ時の言語を変更するようにする！  

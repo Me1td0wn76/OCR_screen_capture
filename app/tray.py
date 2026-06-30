@@ -29,6 +29,9 @@ class TrayApp:
             "ocr_tool", _make_icon_image(), "OCR スクリーン転写", menu=self._build_menu()
         )
         self.c.set_notifier(self._notify)
+        # Let the controller refresh menu checkmarks when state changes outside
+        # the menu (global hotkey, web settings).
+        self.c.set_menu_refresh(self.icon.update_menu)
 
     def _notify(self, title: str, message: str) -> None:
         try:

@@ -50,6 +50,6 @@ def config_path() -> Path:
 
 
 def web_dir() -> Path:
-    """Directory of the Flask templates/static (bundled resource)."""
+    """Directory of the Flask static assets / built SPA (bundled resource)."""
     return resource_dir() / "app" / "web"
 
