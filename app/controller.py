@@ -16,7 +16,7 @@ from .ocr import OCREngine
 from .paths import config_path
 from .translate import Translator
 from .tts import Speaker, list_voices
-from .hotkey import HotkeyMangeer   
+from .hotkey import HotkeyManager
 
 log = logging.getLogger(__name__)
 
@@ -42,18 +42,11 @@ class Controller:
         self.hotkeys = HotkeyManager()
 
     # -- hotkey wiring -------------------------------------------------------
-    def toggle_auto_ocr_hotkey(self):
+    def toggle_auto_ocr_hotkey(self) -> None:
+        """Hotkey action: flip auto-OCR on/off and notify the user."""
         self.toggle_auto_ocr()
-        state = "ON" if self.cfg.get("get_ocr") else "OFF"
+        state = "ON" if self.cfg.get("auto_ocr") else "OFF"
         self.notify("自動OCR", f"自動OCRを{state}に切り替えました")
-
-    # start()
-    self.hotkeys.start({"toggle_auto_ocr": self._toggle_auto_ocr_notify})
-    # apply_settings()
-    self.hotkeys.apply(self.cfg.get("hotkeys", {}))
-
-    # shutdown()
-    self.hotkeys.stop()
 
     # -- wiring -------------------------------------------------------------
     def set_notifier(self, notifier: NotifyFn) -> None:
@@ -73,9 +66,12 @@ class Controller:
         self.watcher.start()
         self.watcher.set_enabled(self.cfg.get("auto_ocr", True))
         threading.Thread(target=self.ocr.warm_up, name="ocr-warmup", daemon=True).start()
+        self.hotkeys.start({"toggle_auto_ocr": self.toggle_auto_ocr_hotkey})
+        self.hotkeys.apply(self.cfg.get("hotkeys", {}))
 
     def shutdown(self) -> None:
         self.watcher.stop()
+        self.hotkeys.stop()
 
     # -- settings -----------------------------------------------------------
     def _save(self) -> None:
@@ -154,6 +150,7 @@ class Controller:
         self.tts = Speaker(self.cfg)
         self.translator = Translator(self.cfg)
         self.watcher.set_enabled(self.cfg.get("auto_ocr", True))
+        self.hotkeys.apply(self.cfg.get("hotkeys", {}))
         threading.Thread(target=self.ocr.warm_up, name="ocr-warmup", daemon=True).start()
 
     def complete_setup(self, language: str, model_dir: str | None) -> None:
