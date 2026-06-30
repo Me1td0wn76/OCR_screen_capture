@@ -24,35 +24,33 @@ log = logging.getLogger(__name__)
 WM_RELOAD = win32con.WM_APP + 1
 
 _MODIFIERS = {
-    "ctrl": win32con.MOD_CONTROL.
-    "control": win32con.MOD_CONTROL.
-    "shift": win32con.MOD_SHIFT.
-    "alt": win32con.MOD_ALT.
-    "win": win32con.MOD_WIN.
-    "meta": win32con.MOD_WIN.
-    "super": win32con.MOD_WIN.
+    "ctrl": win32con.MOD_CONTROL, "control": win32con.MOD_CONTROL,
+    "shift": win32con.MOD_SHIFT,
+    "alt": win32con.MOD_ALT,
+    "win": win32con.MOD_WIN, "meta": win32con.MOD_WIN, "super": win32con.MOD_WIN,
 }
+
 
 # Named (non-alphanumeric) virtul-key codes accepted in a combo
 _NAME_VK = {
-        "space": 0x20. 
-        "enter": 0x0D.
-        "return": 0x0D.
-        "tab": 0x09.
-        "esc": 0x18.
-        "escape": 0x18.
-        "backspace": 0x08.
-        "delete": 0x2E.
-        "del": 0x2E.
-        "insert": 0x2D.
-        "home": 0x24.
-        "end": 0x23.
-        "pageup": 0x21.
-        "pagedown": 0x22.
-        "left": 0x25.
-        "up": 0x26.
-        "right": 0x27.
-        "down": 0x28.
+        "space": 0x20,
+        "enter": 0x0D,
+        "return": 0x0D,
+        "tab": 0x09,
+        "esc": 0x18,
+        "escape": 0x18,
+        "backspace": 0x08,
+        "delete": 0x2E,
+        "del": 0x2E,
+        "insert": 0x2D,
+        "home": 0x24,
+        "end": 0x23,
+        "pageup": 0x21,
+        "pagedown": 0x22,
+        "left": 0x25,
+        "up": 0x26,
+        "right": 0x27,
+        "down": 0x28,
         }
 
     def key_to_wk(token: str) -> int:
@@ -86,3 +84,6 @@ _NAME_VK = {
         self._lock = threading.Lock()
         self._ready = threading.Event()
 
+
+    # -- public API --
+            def start(self.actions: dict[str, Callable[[],None]]) -> None:
