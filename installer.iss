@@ -7,7 +7,7 @@
 
 #define MyAppName "OCR Screen Capture Transcription"
 #define MyAppExeName "OCR_Transcribe.exe"
-#define MyAppVersion "0.3.0"
+#define MyAppVersion "0.4.0"
 #define MyAppPublisher "Me1td0wn76"
 #define MyAppCopyright "Copyright (C) 2026 Me1td0wn76 (MIT License)"
 
@@ -19,7 +19,7 @@ AppPublisher={#MyAppPublisher}
 AppCopyright={#MyAppCopyright}
 
 ; Version resource of the generated Setup.exe (fills "Copyright", file version).
-VersionInfoVersion=0.3.0.0
+VersionInfoVersion=0.4.0.0
 VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#MyAppVersion}
 VersionInfoCompany={#MyAppPublisher}
