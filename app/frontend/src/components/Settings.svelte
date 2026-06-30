@@ -1,27 +1,18 @@
 <script>
   import { onMount } from 'svelte';
-  import { getStatus, postJSON, pickFolder, pollDownload, fmtMB } from '../lib/api.js';
+  import { getStatus, postJSON } from '../lib/api.js';
   import { showToast } from '../lib/toast.svelte.js';
 
   // サーバから取得する状態。最初は null にして「読込前」を表す。
   let cfg = $state(null);
-  let languages = $state([]);
   let voices = $state([]);
-  let modelDir = $state('');
   let llmAvailable = $state(false);
-
-  // ダウンロード進捗の表示用。
-  let showProgress = $state(false);
-  let progressPct = $state(0);
-  let progressText = $state('');
 
   // コンポーネントが画面に出た直後に1回だけ実行される。
   onMount(async () => {
     const s = await getStatus();
     cfg = s.config;
-    languages = s.languages;
     voices = s.voices;
-    modelDir = s.model_dir;       // 解決済みの保存先（cfg.model_dir とは別物）
     llmAvailable = s.llm_available;
 
     // 保存済みの声（部分一致の文字列）を、実際の音声フルネームに解決して選択状態に。
@@ -42,40 +33,9 @@
     showToast('実行しました');
   }
 
-  async function browse() {
-    const path = await pickFolder();
-    if (path) modelDir = path;
-  }
-
-  async function download() {
-    showProgress = true;
-    const res = await postJSON('/api/download', { language: cfg.language, model_dir: modelDir });
-    if (!res.ok) {
-      showToast(res.error || '開始できませんでした');
-      return;
-    }
-    const ok = await pollDownload(({ pct, done, total }) => {
-      progressPct = pct;
-      progressText =
-        total > 0
-          ? `ダウンロード中… ${pct}% (${fmtMB(done)} / ${fmtMB(total)})`
-          : `ダウンロード中… ${fmtMB(done)}`;
-    });
-    if (ok) {
-      progressPct = 100;
-      progressText = '完了！';
-      showToast('ダウンロード完了！');
-      const lang = languages.find((l) => l.code === cfg.language);
-      if (lang) lang.downloaded = true;   // バッジを「DL済み」に更新
-    } else {
-      showToast('ダウンロードに失敗しました');
-    }
-  }
-
   async function save() {
     await postJSON('/api/settings', {
       language: cfg.language,
-      model_dir: modelDir,
       auto_ocr: cfg.auto_ocr,
       copy_to_clipboard: cfg.copy_to_clipboard,
       show_notifications: cfg.show_notifications,
@@ -147,37 +107,6 @@
       <button class="btn" onclick={() => runAction('speak_last')}> 直近を読み上げ</button>
       <button class="btn" onclick={() => runAction('translate_last')}> 直近を翻訳</button>
     </div>
-  </section>
-
-  <section class="card">
-    <h2>言語とモデル</h2>
-    <div class="lang-grid">
-      {#each languages as lang}
-        <label class="lang-card" class:selected={cfg.language === lang.code}>
-          <input type="radio" name="language" value={lang.code} bind:group={cfg.language} />
-          <span class="lang-label">{lang.label}</span>
-          <span class="badge" class:ok={lang.downloaded} class:todo={!lang.downloaded}>
-            {lang.downloaded ? 'DL済み' : '未DL'}
-          </span>
-        </label>
-      {/each}
-    </div>
-
-    <label class="field"><span>モデル保存先</span>
-      <div class="row gap">
-        <input class="text" type="text" bind:value={modelDir} />
-        <button class="btn" type="button" onclick={browse}>参照</button>
-      </div>
-    </label>
-
-    {#if showProgress}
-      <div class="progress-wrap">
-        <div class="progress"><div class="bar" style="width: {progressPct}%"></div></div>
-        <div class="progress-text">{progressText}</div>
-      </div>
-    {/if}
-
-    <button class="btn" onclick={download}>選択言語のモデルをダウンロード/再取得</button>
   </section>
 
   <section class="card">
