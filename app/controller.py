@@ -222,11 +222,14 @@ class Controller:
         if not self._busy.acquire(blocking=False):
             return  # an OCR job is already running; skip this one
         try:
+            log.info("OCR: recognizing clipboard image %sx%s", *img.size)
             self.notify("OCR", "認識中…")
             text = self.ocr.recognize(img)
             if not text:
+                log.info("OCR: no text detected")
                 self.notify("OCR", "文字を検出できませんでした")
                 return
+            log.info("OCR: done (%d chars)", len(text))
             self.last_text = text
             self._copy_text(text)
 
