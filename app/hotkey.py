@@ -70,4 +70,19 @@ _NAME_VK = {
         return None
 
 
+    class HotkeyManager:
+        """Registers global hotkeys and dispatches them named actions."""
+
+    def __init__(self) -> None:
+        self._actions: dict[str, Callable[[], None]] = {}
+        self._config: dict[str, dict] = {}
+        self._name_to_id: dict[str, int] = {}
+        self._id_to_name: dict[int, str] = {}
+        self._registered: list[int] = []
+        self.errors: dict[str, str] = {}      # name -> message, for the UI
+
+        self._tid: int | None = None
+        self._thread: threading.Thread | None = None
+        self._lock = threading.Lock()
+        self._ready = threading.Event()
 
