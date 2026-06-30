@@ -85,7 +85,7 @@
         target_lang: cfg.translate.target_lang.trim(),
       },
     });
-    showToast('保存しました 💾');
+    showToast('保存しました ');
   }
 </script>
 
