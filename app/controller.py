@@ -16,6 +16,7 @@ from .ocr import OCREngine
 from .paths import config_path
 from .translate import Translator
 from .tts import Speaker, list_voices
+from .hotkey import HotkeyMangeer   
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +39,21 @@ class Controller:
         self.ui = None  # set by main(); native UIManager
         self._notify: NotifyFn = lambda title, msg: None
         self._busy = threading.Lock()
+        self.hotkeys = HotkeyManager()
+
+    # -- hotkey wiring -------------------------------------------------------
+    def toggle_auto_ocr_hotkey(self):
+        self.toggle_auto_ocr()
+        state = "ON" if self.cfg.get("get_ocr") else "OFF"
+        self.notify("自動OCR", f"自動OCRを{state}に切り替えました")
+
+    # start()
+    self.hotkeys.start({"toggle_auto_ocr": self._toggle_auto_ocr_notify})
+    # apply_settings()
+    self.hotkeys.apply(self.cfg.get("hotkeys", {}))
+
+    # shutdown()
+    self.hotkeys.stop()
 
     # -- wiring -------------------------------------------------------------
     def set_notifier(self, notifier: NotifyFn) -> None:
@@ -222,3 +238,4 @@ class Controller:
                 self.tts.speak(text)
         finally:
             self._busy.release()
+
