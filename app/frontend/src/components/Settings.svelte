@@ -8,8 +8,9 @@
   let voices = $state([]);
   let llmAvailable = $state(false);
 
-  // コンポーネントが画面に出た直後に1回だけ実行される。
-  onMount(async () => {
+  // サーバの現在の状態を取り込む（トレイ/ホットキーでの変更も反映するため、
+  // 表示・フォーカスのたびに呼び直す）。
+  async function load() {
     const s = await getStatus();
     cfg = s.config;
     voices = s.voices;
@@ -26,6 +27,22 @@
     if (!cfg.hotkeys.toggle_auto_ocr) {
       cfg.hotkeys.toggle_auto_ocr = { enabled: true, combo: 'ctrl+shift+o' };
     }
+  }
+
+  onMount(() => {
+    load();
+    // トレイメニューやホットキーで状態が変わったあと、ウィンドウに戻ってきたら
+    // 最新の設定を取り直して表示を一致させる（古い値で上書き保存するのを防ぐ）。
+    const resync = () => load();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    window.addEventListener('focus', resync);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', resync);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   });
 
   async function runAction(name) {
