@@ -22,7 +22,7 @@
       if (hit) cfg.tts.voice_match = hit.name;
     }
 
-    // hotkeys が無い古い config への保険（config.py の DEFAULTS に追加されるまで）。
+    // hotkeys が無い古い config への保険（念のため）。
     if (!cfg.hotkeys) cfg.hotkeys = {};
     if (!cfg.hotkeys.toggle_auto_ocr) {
       cfg.hotkeys.toggle_auto_ocr = { enabled: true, combo: 'ctrl+shift+o' };
