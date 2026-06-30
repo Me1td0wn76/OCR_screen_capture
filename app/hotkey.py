@@ -86,4 +86,85 @@ _NAME_VK = {
 
 
     # -- public API --
-            def start(self.actions: dict[str, Callable[[],None]]) -> None:
+    def start(self.actions: dict[str, Callable[[],None]]) -> None:
+        """Start the hotkey thread and register the actions."""
+                self._actions = dict(actions)
+        # Stable hotkey id (1..N) per known action.
+        self._name_to_id = {name: i + 1 for i, name in enumerate(sorted(actions))}
+        self._id_to_name = {i: n for n, i in self._name_to_id.items()}
+        self._thread = threading.Thread(target=self._run, name="hotkeys", daemon=True)
+        self._thread.start()
+        self._ready.wait(timeout=3)
+
+    def apply(self, config: dict[str, dict]) -> None:
+        """Re-register from config: {name: {"enabled": bool, "combo": str}}."""
+        with self._lock:
+            self._config = {k: dict(v) for k, v in (config or {}).items()}
+        if self._tid is not None:
+            win32api.PostThreadMessage(self._tid, WM_RELOAD, 0, 0)
+
+    def stop(self) -> None:
+        if self._tid is not None:
+            win32api.PostThreadMessage(self._tid, win32con.WM_QUIT, 0, 0)
+
+    # -- thread internals ---------------------------------------------------
+    def _run(self) -> None:
+        self._tid = win32api.GetCurrentThreadId()
+        self._ready.set()
+        self._reregister()
+        try:
+            while True:
+                rc, msg = win32gui.GetMessage(None, 0, 0)
+                if rc in (0, -1):                 # WM_QUIT / error
+                    break
+                message, wparam = msg[1], msg[2]
+                if message == win32con.WM_HOTKEY:
+                    self._dispatch(wparam)
+                elif message == WM_RELOAD:
+                    self._reregister()
+        finally:
+            self._unregister_all()
+
+    def _dispatch(self, hotkey_id: int) -> None:
+        name = self._id_to_name.get(hotkey_id)
+        fn = self._actions.get(name) if name else None
+        if not fn:
+            return
+        try:
+            fn()
+        except Exception:
+            log.exception("hotkey action %s failed", name)
+
+    def _reregister(self) -> None:
+        self._unregister_all()
+        with self._lock:
+            config = dict(self._config)
+        self.errors.clear()
+        for name, hk in config.items():
+            if name not in self._name_to_id or not hk.get("enabled"):
+                continue
+            combo = str(hk.get("combo", "")).strip()
+            if not combo:
+                continue
+            try:
+                mods, vk = parse_combo(combo)
+            except ValueError as e:
+                self.errors[name] = str(e)
+                log.warning("invalid hotkey %s=%r: %s", name, combo, e)
+                continue
+            hotkey_id = self._name_to_id[name]
+            try:
+                win32gui.RegisterHotKey(0, hotkey_id, mods, vk)
+                self._registered.append(hotkey_id)
+                log.info("registered hotkey %s = %s", name, combo)
+            except pywintypes.error as e:
+                self.errors[name] = "This key is already in use by another application."
+                log.warning("RegisterHotKey failed for %s=%r: %s", name, combo, e)
+
+    def _unregister_all(self) -> None:
+        for hotkey_id in self._registered:
+            try:
+                win32gui.UnregisterHotKey(0, hotkey_id)
+            except pywintypes.error:
+                pass
+        self._registered.clear()
