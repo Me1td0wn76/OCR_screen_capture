@@ -18,6 +18,7 @@ from .paths import config_path
 from .translate import Translator
 from .tts import Speaker, list_voices
 from .hotkey import HotkeyManager
+from .platform import open_path
 
 log = logging.getLogger(__name__)
 
@@ -120,7 +121,7 @@ class Controller:
         if not path.exists():
             self._save()
         try:
-            os.startfile(str(path))  # noqa: S606 - intended on Windows
+            open_path(path) #change to open_path for cross-platform compatibility(branch feature/#9/linux-support )
         except Exception:
             log.exception("could not open config file")
 
